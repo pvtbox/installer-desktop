@@ -1,0 +1,563 @@
+;/**
+;*  
+;*  Pvtbox. Fast and secure file transfer & sync directly across your devices. 
+;*  Copyright © 2020  Pb Private Cloud Solutions Ltd. 
+;*  
+;*  This program is free software: you can redistribute it and/or modify
+;*  it under the terms of the GNU General Public License as published by
+;*  the Free Software Foundation, either version 3 of the License, or
+;*  (at your option) any later version.
+;*  
+;*  This program is distributed in the hope that it will be useful,
+;*  but WITHOUT ANY WARRANTY; without even the implied warranty of
+;*  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;*  GNU General Public License for more details.
+;*  
+;*  You should have received a copy of the GNU General Public License
+;*  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+;*  
+;**/
+;********************************************************************************
+;**
+;** Inno Setup installer script for Pvtbox client.
+;**
+;********************************************************************************
+
+#include <idp.iss>
+#include "unzip.iss"
+
+#define GLOBAL_APPNAME "Pvtbox"
+#define GLOBAL_VERSION "${VERSION}"
+#define GLOBAL_PUBLISHER "PB Private Cloud Solutions Ltd"
+#define GLOBAL_URL "http://pvtbox.net"
+
+#define SERVER_PATH "https://installer.pvtbox.net/${UPDATE_BRANCH}/win"
+#define PVTBOXEXE "pvtbox.exe"
+#define PVTBOXSERVICE "pvtbox-service.exe"
+#define NANOMSG "nanomsg.dll"
+#define MENUDLL "pvtbox-menu.dll"
+#define OVERLAYSDLL "pvtbox-overlays.dll"
+
+#define ARTIFACT_PATH ".\artifacts"
+#define ARTIFACT_MAIN_ARCHIVE_X64 "x64.zip"
+#define ARTIFACT_MAIN_ARCHIVE_X86 "x86.zip"
+
+#define OFFLINE_INSTALLER_X64 "PvtboxSetup-offline_x64.exe"
+#define OFFLINE_INSTALLER_X86 "PvtboxSetup-offline_x86.exe"
+
+#define NAV_PANE_CLSID "{{07fa4a2b-c86d-4b31-925a-3d15d941f98e}"
+[Setup]
+;********************************************************************************
+;** Section with install/uninstall parameters.
+;********************************************************************************
+AppId={{6157b0f2-1893-4324-8bdb-075441741a20}}
+AppName ={#GLOBAL_APPNAME}
+AppVersion={#GLOBAL_VERSION}
+AppPublisher={#GLOBAL_PUBLISHER}
+AppPublisherURL={#GLOBAL_URL}
+AppSupportURL={#GLOBAL_URL}
+AppUpdatesURL={#GLOBAL_URL}
+
+; Default install path (Program files).
+DefaultDirName={param:PATH|{localappdata}\{#GLOBAL_APPNAME}}
+; Group name in "Start" menu.
+DefaultGroupName={#GLOBAL_APPNAME}
+
+; Path to output build result
+; and installer file name without extension.
+OutputDir=.\build
+OutputBaseFileName=${SETUP_NAME}
+
+; Path to icon.
+SetupIconFile=.\artifacts\icon.ico
+WizardSmallImageFile=.\artifacts\logo.bmp
+WizardImageStretch=no
+UninstallDisplayIcon={app}\{#PVTBOXEXE},0
+
+; Archive type.
+Compression=lzma
+; All files are compressed at the same time (for faster compression).
+SolidCompression=yes
+
+; "ArchitecturesInstallIn64BitMode=x64" requests that the install be
+; done in "64-bit mode" on x64, meaning it should use the native
+; 64-bit Program Files directory and the 64-bit view of the registry.
+; On all other architectures it will install in "32-bit mode".
+ArchitecturesInstallIn64BitMode=x64
+
+CloseApplications=force
+PrivilegesRequired=lowest
+
+DisableProgramGroupPage=yes
+DisableReadyMemo=yes
+DisableReadyPage=yes
+ShowComponentSizes=no
+DisableDirPage=yes
+
+Uninstallable=not IsPortable()
+
+[Languages]
+;********************************************************************************
+;** Section with languages configuration.
+;********************************************************************************
+Name: "english"; MessagesFile: "compiler:Default.isl"; LicenseFile: ".\artifacts\license-en.rtf"
+
+[Files]
+;********************************************************************************
+;** Installation files (artifacts) for offline installer.
+;********************************************************************************
+Source: "{#ARTIFACT_PATH}\{#ARTIFACT_MAIN_ARCHIVE_X64}"; DestDir: "{tmp}"; DestName: "archive.zip"; Flags: ignoreversion; Check: Is64BitInstallMode and IsOffline
+Source: "{#ARTIFACT_PATH}\{#ARTIFACT_MAIN_ARCHIVE_X86}"; DestDir: "{tmp}"; DestName: "archive.zip"; Flags: ignoreversion; Check: not Is64BitInstallMode and IsOffline
+Source: "{#ARTIFACT_PATH}\7za.exe"; DestDir: {tmp}; Flags: ignoreversion
+Source: "{#ARTIFACT_PATH}\license-en.rtf"; DestDir: "{app}"; DestName: "LICENSE.rtf"; Flags: ignoreversion
+Source: "{#ARTIFACT_PATH}\third_party.rtf"; DestDir: "{app}"; DestName: "THIRD_PARTY_LICENSES.rtf"; Flags: ignoreversion
+Source: "{#ARTIFACT_PATH}\PvtboxIntegration.exe"; DestDir: "{tmp}"; Flags: ignoreversion
+
+[InstallDelete]
+;********************************************************************************
+;** Delete files and folers before install.
+;********************************************************************************
+;** Delete folders from python2 version
+Type: filesandordirs; Name: "{app}\imageformats\*.dll"
+Type: filesandordirs; Name: "{app}\imageformats"
+Type: filesandordirs; Name: "{app}\iconengines\*.dll"
+Type: filesandordirs; Name: "{app}\iconengines"
+Type: filesandordirs; Name: "{app}\PySide\*"
+Type: filesandordirs; Name: "{app}\PySide"
+;** End of delete folders from python2 version
+
+[Dirs]
+Name: "{param:PATH|{app}}\icons"
+
+[Run]
+Filename: "{sys}\reg.exe"; Parameters: "add HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v {#GLOBAL_APPNAME} /d ""{app}\{#PVTBOXEXE}"""; Description: "Run {#GLOBAL_APPNAME} at startup"; Flags: postinstall runasoriginaluser runhidden skipifsilent; Check: not IsInStartup and not IsPortable;
+Filename: "{param:PATH|{app}}\{#PVTBOXEXE}"; Description: Run Application; Flags: skipifdoesntexist shellexec postinstall runasoriginaluser nowait;
+Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\RunOnce /v Remove{#GLOBAL_APPNAME} /f"; Flags: runhidden; Check: not IsPortable
+
+[UninstallRun]
+;********************************************************************************
+;** Execute command as the first step of uninstallation.
+;********************************************************************************
+Filename: "{cmd}"; Parameters: "/C ""taskkill /im {#PVTBOXEXE} /f /t /fi ""USERNAME eq %USERNAME%"""; Flags: runhidden; RunOnceId: "KillApp";
+Filename: "{cmd}"; Parameters: "/C ""taskkill /im {#PVTBOXSERVICE} /f /t /fi ""USERNAME eq %USERNAME%"""; Flags: runhidden; RunOnceId: "KillService";
+Filename: "{sys}\Regsvr32.exe"; Parameters: "/u /s {#MENUDLL}"; WorkingDir: "{app}"; StatusMsg: "Unregistering components ... "; Flags: runhidden; RunOnceId: "UnregShellExt"
+Filename: "{cmd}"; Parameters: "/C ""{app}\{#PVTBOXSERVICE} --wipe-internal TRUE 2> nul"; Flags: runhidden; RunOnceId: "WipeInternalData"
+Filename: "{cmd}"; Parameters: "/C ""taskkill /im {#PVTBOXSERVICE} /f /t /fi ""USERNAME eq %USERNAME%"""; Flags: runhidden; RunOnceId: "KillServiceAfterWipeInternalData";
+Filename: "{sys}\reg.exe"; Parameters: "delete HKCU\Software\Microsoft\Windows\CurrentVersion\Run /v {#GLOBAL_APPNAME} /f"; Flags: runhidden; RunOnceId: "RemoveFromStartup"
+
+[UninstallDelete]
+;********************************************************************************
+;** Delete files and folers after uninstall.
+;********************************************************************************
+Type: filesandordirs; Name: "{app}\{#MENUDLL}"
+Type: filesandordirs; Name: "{app}\{#OVERLAYSDLL}"
+Type: filesandordirs; Name: "{app}\{#NANOMSG}"
+Type: filesandordirs; Name: "{app}\{#PVTBOXEXE}"
+Type: filesandordirs; Name: "{app}\{#PVTBOXSERVICE}"
+Type: filesandordirs; Name: "{app}\*.dll"
+Type: filesandordirs; Name: "{userdesktop}\{#GLOBAL_APPNAME}.lnk"
+Type: filesandordirs; Name: "{app}\icons\*"
+Type: filesandordirs; Name: "{app}\icons"
+
+;** Delete folders from python2 version
+Type: filesandordirs; Name: "{app}\imageformats\*.dll"
+Type: filesandordirs; Name: "{app}\imageformats"
+Type: filesandordirs; Name: "{app}\iconengines\*.dll"
+Type: filesandordirs; Name: "{app}\iconengines"
+Type: filesandordirs; Name: "{app}\PySide2\*"
+Type: filesandordirs; Name: "{app}\PySide2"
+;** End of delete folders from python2 version
+
+Type: filesandordirs; Name: "{app}"
+
+[Registry]
+;********************************************************************************
+;** Set registry variables for handling custom uri scheme 'pvtbox://'.
+;********************************************************************************
+Root: HKCU; Subkey: "Software\Classes\pvtbox"; ValueType: "string"; ValueData: "URL:Pvtbox Protocol"; Flags: uninsdeletekey; Check: not IsPortable;
+Root: HKCU; Subkey: "Software\Classes\pvtbox"; ValueType: "string"; ValueName: "URL Protocol"; ValueData: ""; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\pvtbox\DefaultIcon"; ValueType: "string"; ValueData: "{app}\{#PVTBOXEXE},0"; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\pvtbox\shell\open\command"; ValueType: "string"; ValueData: """{app}\{#PVTBOXEXE}"" ""--download-link"" ""%1"""; Check: not IsPortable
+
+; Set registry entries to show app icon in explorer navigation pane
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}"; ValueType: "string"; ValueData: "Pvtbox"; Flags: uninsdeletekey; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}"; ValueType: "dword"; ValueName: "System.IsPinnedToNameSpaceTree"; ValueData: "$1"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}"; ValueType: "dword"; ValueName: "SortOrderIndex"; ValueData: "$42"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\DefaultIcon"; ValueType: "string"; ValueData: "{app}\{#PVTBOXEXE},0"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\InProcServer32"; ValueType: "string"; ValueData: "{sys}\shell32.dll"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\Instance"; ValueType: "string"; ValueName: "CLSID"; ValueData: "{{0E5AAE11-A475-4c5b-AB00-C66DE400274E}"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\Instance\InitPropertyBag"; ValueType: "dword"; ValueName: "Attributes"; ValueData: "$11"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\Instance\InitPropertyBag"; ValueType: "string"; ValueName: "TargetFolderPath"; ValueData: "{userdesktop}\..\Pvtbox"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\ShellFolder"; ValueType: "dword"; ValueName: "Attributes"; ValueData: "$F080004D"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\ShellFolder"; ValueType: "dword"; ValueName: "FolderValueFlags"; ValueData: "$28"; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{#NAV_PANE_CLSID}"; ValueType: "string"; ValueData: "Pvtbox"; Flags: uninsdeletekey; MinVersion: 10.0; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"; ValueType: "dword"; ValueName: "{#NAV_PANE_CLSID}"; ValueData: "$1"; Flags: uninsdeletevalue; MinVersion: 10.0; Check: not IsPortable
+
+
+;********************************************************************************
+;** Code Section with Pascal helpers.
+;********************************************************************************
+[Code]
+const
+  SHCONTCH_NOPROGRESSBOX = 4;
+  SHCONTCH_RESPONDYESTOALL = 16;
+  PvtboxSetupMutex = 'PvtboxSetup_156dee1e-1fc6-4eba-8055-bc922576e4fa';
+
+function IsPortable(): Boolean;
+begin
+    Result := Length(ExpandConstant('{param:PATH}')) > 0
+end;
+
+function IsInStartup(): Boolean;
+begin
+    Result := RegValueExists(HKEY_CURRENT_USER, 'Software\Microsoft\Windows\CurrentVersion\Run\', '{#GLOBAL_APPNAME}');
+end;
+
+function IsOffline(): Boolean;
+begin
+    Result := ${IS_OFFLINE};
+end;
+
+procedure DisableIEOfflineMode();
+begin
+    if RegValueExists(HKEY_CURRENT_USER, 
+                      'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 
+                      'GlobalUserOffline') then
+        RegWriteDWordValue(HKEY_CURRENT_USER, 
+                           'Software\Microsoft\Windows\CurrentVersion\Internet Settings', 
+                           'GlobalUserOffline', 0)
+end;
+
+function InitializeSetup(): Boolean;
+var
+  WinHttpReq: Variant;
+  installedVersion: String;
+  sUnInstPath: String;
+  version: string;
+begin
+    Result := True;
+    if CheckForMutexes(PvtboxSetupMutex) then
+    begin
+        MsgBox('Duplicate copy detected.', mbError, MB_OK);
+        Result := False;
+        Exit;
+    end
+    else
+    begin
+        CreateMutex(PvtboxSetupMutex);
+    end;
+
+	if RegQueryStringValue(HKEY_CURRENT_USER,
+		'Software\Microsoft\Windows\CurrentVersion\Uninstall\{6157b0f2-1893-4324-8bdb-075441741a20}}_is1', 
+		'DisplayVersion', version) then
+		begin
+			Log('Installed version is ' + version)
+			if (version[1] = '1') and (version[2] = '.') and (version[4] = '.') and (version[3] < '4') then
+				begin
+					MsgBox('Incompatible Pvtbox version found.' + chr(10) + 'Please delete it via Control Panel and install current again', mbInformation, MB_OK);
+					Abort;
+				end
+		end
+	else 
+		Log('Cannot determine version');
+
+    if IsOffline() then
+    begin
+        Exit;
+    end;
+	
+end;
+
+procedure InitializeWizard();
+var
+  ResultCode: Integer;
+begin
+    if IsOffline() then
+    begin
+        Exit;
+    end;
+
+    DisableIEOfflineMode();
+    idpSetInternalOption('ReceiveTimeout', '120000');
+    idpSetInternalOption('SendTimeout', '120000');
+	
+    //idpSetInternalOption('AllowContinue', '1'); uncomment to show custom error page
+	
+    if Is64BitInstallMode then
+    begin
+        Log('Add file download {#SERVER_PATH}/x64.zip into ' + ExpandConstant('{tmp}\archive.zip'));
+        idpAddFile('{#SERVER_PATH}/x64.zip', ExpandConstant('{tmp}\archive.zip'));
+    end
+    else
+    begin
+        Log('Add file download {#SERVER_PATH}/x86.zip into ' + ExpandConstant('{tmp}\archive.zip'));
+        idpAddFile('{#SERVER_PATH}/x86.zip', ExpandConstant('{tmp}\archive.zip'));
+    end;
+
+    idpDownloadAfter(wpReady);
+end;
+
+procedure ExitProcess(uExitCode: Integer);
+  external 'ExitProcess@kernel32.dll stdcall';
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  FindRec: TFindRec;
+  SourceFilePath: string;
+  DestFilePath: string;
+  ResultCode: Integer;
+  downloadError: boolean;
+  RunMethod: String;
+  overlaysExists: boolean;
+begin
+    if CurStep = ssPostInstall then
+    begin
+        Log('PostInstall insallation step');
+        downloadError := False;
+        if not IsOffline then
+            downloadError := not idpFilesDownloaded;
+		
+        WizardForm.StatusLabel.Caption := 'Unpacking files...'
+        Log('Unzipping ' + ExpandConstant('{tmp}\archive.zip') + ' to ' + ExpandConstant('{tmp}'));
+        try
+            Unzip(ExpandConstant('{tmp}\archive.zip'), ExpandConstant('{tmp}'));
+            Log('Unzipped ' + ExpandConstant('{tmp}\archive.zip') + ' to ' + ExpandConstant('{tmp}'));
+        except
+            if not IsOffline then
+                downloadError := True;
+        end;
+		
+        //if downloadError then begin
+        //    if Is64BitInstallMode then
+        //        exeName := '{#OFFLINE_INSTALLER_X64}'
+        //    else
+        //        exeName := '{#OFFLINE_INSTALLER_X86}';
+        // show custom page instead of finish page (?) with error message:
+        // 'Pvtbox installation failed due to download error.' + NewLine +
+        // 'You can install application with offline installer at' + NewLine +
+        // '{#SERVER_PATH}/' + exeName
+        // Exit;
+        
+        overlaysExists := FileExists(ExpandConstant('{param:PATH|{app}}\{#OVERLAYSDLL}'))
+
+        Log('Taskkill application and service ');
+        try
+            ExecAsOriginalUser(ExpandConstant('{cmd}'), '/C taskkill /im {#PVTBOXEXE} /f /t /fi "USERNAME eq %USERNAME%"', ExpandConstant('{param:PATH|{app}}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        except
+        end;
+        Log('Killed application ');
+        try
+            ExecAsOriginalUser(ExpandConstant('{cmd}'), '/C taskkill /im {#PVTBOXSERVICE} /f /t /fi "USERNAME eq %USERNAME%"', ExpandConstant('{param:PATH|{app}}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        except
+        end;
+        Log('Killed application and service ');
+
+        Log('Deleting _old files');
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#MENUDLL}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#OVERLAYSDLL}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#NANOMSG}_old'))
+        DelTree(ExpandConstant('{param:PATH|{app}}\db_migrations'), True, True, True);
+        Log('Deleted _old files');
+ 
+        // Copy downloaded files to application directory
+        WizardForm.StatusLabel.Caption := 'Copying files...'
+        Log('Copying files');
+
+        RenameFile(ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}'), ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}_old'))
+        if FileCopy(ExpandConstant('{tmp}\{#PVTBOXEXE}'), ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}'), false) then
+        begin
+            Log('Copied file ' + ExpandConstant('{tmp}\{#PVTBOXEXE}') + ' into ' + ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}'));
+        end
+        else
+        begin
+            Log('Failed to copy file ' + ExpandConstant('{tmp}\{#PVTBOXEXE}') + ' into ' + ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}'));
+        end;
+        
+        RenameFile(ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}'), ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}_old'))
+        if FileCopy(ExpandConstant('{tmp}\{#PVTBOXSERVICE}'), ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}'), false) then
+        begin
+            Log('Copied file ' + ExpandConstant('{tmp}\{#PVTBOXSERVICE}') + ' into ' + ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}'));
+        end
+        else
+        begin
+            Log('Failed to copy file ' + ExpandConstant('{tmp}\{#PVTBOXSERVICE}') + ' into ' + ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}'));
+        end;
+
+        if not IsPortable() then
+        begin
+            RenameFile(ExpandConstant('{app}\{#MENUDLL}'), ExpandConstant('{app}\{#MENUDLL}_old'))
+            if FileCopy(ExpandConstant('{tmp}\{#MENUDLL}'), ExpandConstant('{app}\{#MENUDLL}'), false) then
+            begin
+                Log('Copied file ' + ExpandConstant('{tmp}\{#MENUDLL}') + ' into ' + ExpandConstant('{app}\{#MENUDLL}'));
+            end
+            else
+            begin
+                Log('Failed to copy file ' + ExpandConstant('{tmp}\{#MENUDLL}') + ' into ' + ExpandConstant('{app}\{#MENUDLL}'));
+            end;
+            RenameFile(ExpandConstant('{app}\{#OVERLAYSDLL}'), ExpandConstant('{app}\{#OVERLAYSDLL}_old'))
+            if FileCopy(ExpandConstant('{tmp}\{#OVERLAYSDLL}'), ExpandConstant('{app}\{#OVERLAYSDLL}'), false) then
+            begin
+                Log('Copied file ' + ExpandConstant('{tmp}\{#OVERLAYSDLL}') + ' into ' + ExpandConstant('{app}\{#OVERLAYSDLL}'));
+            end
+            else
+            begin
+                Log('Failed to copy file ' + ExpandConstant('{tmp}\{#OVERLAYSDLL}') + ' into ' + ExpandConstant('{app}\{#OVERLAYSDLL}'));
+            end;
+        end;
+        RenameFile(ExpandConstant('{app}\{#NANOMSG}'), ExpandConstant('{app}\{#NANOMSG}_old'))
+        if FileCopy(ExpandConstant('{tmp}\{#NANOMSG}'), ExpandConstant('{app}\{#NANOMSG}'), false) then
+        begin
+            Log('Copied file ' + ExpandConstant('{tmp}\{#NANOMSG}') + ' into ' + ExpandConstant('{app}\{#NANOMSG}'));
+        end
+        else
+        begin
+            Log('Failed to copy file ' + ExpandConstant('{tmp}\{#NANOMSG}') + ' into ' + ExpandConstant('{app}\{#NANOMSG}'));
+        end;
+        Log('Copied files');
+
+
+        Log('Deleting _old files');
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#PVTBOXEXE}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#PVTBOXSERVICE}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#MENUDLL}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#OVERLAYSDLL}_old'))
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\{#NANOMSG}_old'))
+        Log('Deleted _old files');
+
+        Log('Unzipping ' + ExpandConstant('{tmp}\pyinstaller.zip') + ' to ' + ExpandConstant('{param:PATH|{app}}'));
+        try
+            Unzip(ExpandConstant('{tmp}\pyinstaller.zip'), ExpandConstant('{param:PATH|{app}}'));
+            Log('Unzipped ' + ExpandConstant('{tmp}\pyinstaller.zip') + ' to ' + ExpandConstant('{param:PATH|{app}}'));
+        except
+            Log('Failed to unzip ' + ExpandConstant('{tmp}\pyinstaller.zip') + ' to ' + ExpandConstant('{param:PATH|{app}}'));
+        end;
+
+        // Verify copied files by checklist
+        Log('Verifying copied files');
+        if CheckList(ExpandConstant('{tmp}\checklist.txt'), ExpandConstant('{param:PATH|{app}}')) = True then
+        begin
+            Log('Verifying copied files done');
+        end
+        else
+        begin
+            Log('Error occured while verifying copied files');
+            MsgBox('Installation failed!' + #13#10 + 'Disable your antivirus or firewall software and try again.', mbError, MB_OK);
+            DelTree(ExpandConstant('{param:PATH|{app}}'), True, True, True);
+            ExitProcess(1);
+        end;
+
+        Log('Copying files');
+		
+        if FindFirst(ExpandConstant('{tmp}\icons\*'), FindRec) then
+        begin
+            try
+                repeat
+                if FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY = 0 then
+                begin
+                    SourceFilePath := ExpandConstant('{tmp}\icons\') + FindRec.Name;
+                    DestFilePath := ExpandConstant('{param:PATH|{app}}\icons\') + FindRec.Name;
+                    if FileCopy(SourceFilePath, DestFilePath, false) then
+                    begin
+                        Log('Copied file ' + SourceFilePath + ' into ' + DestFilePath);
+                    end
+                    else
+                    begin
+                        Log('Failed to copy file ' + SourceFilePath + ' into ' + DestFilePath);
+                    end;
+                end;
+                until not FindNext(FindRec);
+            finally
+                FindClose(FindRec);
+            end;
+        end;
+
+        Log('Copied files');
+        
+        if not IsPortable() then
+        begin
+            WizardForm.StatusLabel.Caption := 'Integrating with os...'
+            if not IsAdminLoggedOn() then
+                begin
+                    RunMethod := 'runas';
+                end else
+                begin
+                    RunMethod := '';
+                end;
+            if not IsOffline() then
+            begin
+                ShellExec(RunMethod, ExpandConstant('{tmp}\PvtboxIntegration.exe'), ExpandConstant('{app}'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+            end else
+            begin
+                if not overlaysExists then
+                    begin
+                        try
+                            ShellExec(RunMethod, ExpandConstant('{tmp}\PvtboxIntegration.exe'), ExpandConstant('{app}'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+                        except
+                        end;
+                    end;
+                end;
+            try
+                ExecAsOriginalUser(ExpandConstant('{sys}\Regsvr32.exe'), '/s {#MENUDLL}', ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
+            except
+            end;
+            // Setup icon on desktop instead [Icons] section
+            WizardForm.StatusLabel.Caption := 'Creating shortcuts...'
+            Log('CreateShellLink userdesktop');
+            CreateShellLink(
+               ExpandConstant('{userdesktop}\{#GLOBAL_APPNAME}.lnk'),
+               '',
+               ExpandConstant('{app}\{#PVTBOXEXE}'),
+               '',
+               ExpandConstant('{app}'),
+               '',
+               0,
+               SW_HIDE
+            );
+            Log('CreateShellLink userdesktop done');
+            //;;Name: "{group}\{#GLOBAL_APPNAME}"; Filename: "{app}\{#PVTBOXEXE}"
+            Log('CreateShellLink group');
+            CreateDir(ExpandConstant('{group}'));
+            CreateShellLink(
+               ExpandConstant('{group}\{#GLOBAL_APPNAME}.lnk'),
+               '',
+               ExpandConstant('{app}\{#PVTBOXEXE}'),
+               '',
+               ExpandConstant('{app}'),
+               '',
+               0,
+               SW_HIDE
+            );
+            Log('CreateShellLink group done');
+        end;
+        DelTree(ExpandConstant('{param:PATH|{app}}\locale'), True, True, True);
+        DeleteFile(ExpandConstant('{param:PATH|{app}}\language\ru.qm'));
+    end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+var
+  ResultCode: Integer;
+begin
+    if CurUninstallStep = usPostUninstall then begin
+        if not RenameFile(ExpandConstant('{app}\{#NANOMSG}'), ExpandConstant('{tmp}\{#NANOMSG}')) then
+            Log('Failed to move file ' + ExpandConstant('{app}\{#NANOMSG}') + ' into ' + ExpandConstant('{tmp}\{#NANOMSG}'));
+        if not RenameFile(ExpandConstant('{app}\{#MENUDLL}'), ExpandConstant('{tmp}\{#MENUDLL}')) then
+            Log('Failed to move file ' + ExpandConstant('{app}\{#MENUDLL}') + ' into ' + ExpandConstant('{tmp}\{#MENUDLL}'));
+        if not RenameFile(ExpandConstant('{app}\{#OVERLAYSDLL}'), ExpandConstant('{tmp}\{#OVERLAYSDLL}')) then
+            Log('Failed to move file ' + ExpandConstant('{app}\{#OVERLAYSDLL}') + ' into ' + ExpandConstant('{tmp}\{#OVERLAYSDLL}'));
+        if not RemoveDir(ExpandConstant('{app}')) then 
+            Log('Failed to remove dir ' + ExpandConstant('{app}'));
+        if not DeleteFile(ExpandConstant('{group}\{#GLOBAL_APPNAME}.lnk')) then
+            Log('Failed to remove file ' + ExpandConstant('{group}\{#GLOBAL_APPNAME}.lnk'));
+        if not RemoveDir(ExpandConstant('{group}')) then 
+            Log('Failed to remove dir ' + ExpandConstant('{group}'));
+		
+        RegWriteStringValue(HKEY_CURRENT_USER, 
+                            'Software\Microsoft\Windows\CurrentVersion\RunOnce', 
+                            'Remove' + ExpandConstant('{#GLOBAL_APPNAME}'), 
+                            ExpandConstant('{cmd} /C rmdir /s /q "{tmp}"'));
+    end;
+end;
+

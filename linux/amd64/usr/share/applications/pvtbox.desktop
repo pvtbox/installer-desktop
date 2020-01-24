@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+GenericName=File Synchronizer
+Name=Pvtbox
+Comment=The advanced file sharing program.
+TryExec=pvtbox
+Exec=pvtbox --download-link=%u
+Icon=pvtbox
+Terminal=false
+Categories=Network;System;
+StartupNotify=false
+X-GNOME-Autostart-Delay=60
+MimeType=x-scheme-handler/pvtbox

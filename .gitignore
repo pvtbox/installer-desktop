@@ -1,0 +1,22 @@
+# Ignore linux build files
+#linux/amd64/usr/*
+#linux/i386/usr/*
+
+*.deb
+
+# Ignore windows build files.
+windows/build/
+
+*.exe
+*.dll
+*.mo
+
+!windows/artifacts/x64/vc_redist.x64.exe
+!windows/artifacts/x86/vc_redist.x86.exe
+!windows/Pvtbox-Windows.exe
+!windows/PvtboxSystemIntegration.exe
+!windows/PvtboxExplorerIntegration.exe
+!windows/artifacts/x86/msredist/*
+!windows/artifacts/x64/msredist/*
+!windows/artifacts/7za.exe
+
