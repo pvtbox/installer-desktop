@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=pvtbox_ss
+Exec=pvtbox --offline-on %u
+Type=Application
+Terminal=false
+MimeType=application/pvtbox

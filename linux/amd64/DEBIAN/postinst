@@ -88,3 +88,5 @@ gHxUhrSC7qndOudXMUdPAmhOJkD7R0u7IGBQ1sE7gxpSWZwiEbMZE9gGRbwB9XDJ
 KEY
 
 xdg-mime default pvtbox.desktop x-scheme-handler/pvtbox || true
+update-mime-database /usr/share/mime || true
+update-desktop-database /usr/share/applications || true

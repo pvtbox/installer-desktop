@@ -34,12 +34,11 @@ mkdir -p artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Resources
 mv -f artifacts/service.app/Contents/MacOS/*.dylib artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
 mv -f artifacts/service.app/Contents/MacOS/*.so artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
 mv -f artifacts/service.app/Contents/MacOS/Qt* artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
-mv -f artifacts/service.app/Contents/MacOS/PySide2 artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
 
 mv -f artifacts/app.app/Contents/MacOS/*.dylib artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
 mv -f artifacts/app.app/Contents/MacOS/*.so artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
 mv -f artifacts/app.app/Contents/MacOS/Qt* artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
-mv -f artifacts/app.app/Contents/MacOS/PySide2/*.so artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/PySide2/
+mv -f artifacts/app.app/Contents/MacOS/PySide2 artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/Frameworks/
 
 rm -rf artifacts/app.app/Contents/MacOS/*.dylib
 rm -rf artifacts/app.app/Contents/MacOS/*.so
@@ -51,6 +50,7 @@ rm -rf artifacts/app.app/Contents/MacOS/lib
 rm -rf artifacts/service.app/Contents/MacOS/include
 rm -rf artifacts/service.app/Contents/MacOS/lib
 rm -rf artifacts/service.app/Contents/MacOS/*.egg-info
+rm -rf artifacts/service.app/Contents/MacOS/PySide2
 
 cp -rf artifacts/app.app/Contents/MacOS/. artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/MacOS/
 cp -rf artifacts/service.app/Contents/MacOS/. artifacts/Pvtbox.app/Contents/Pvtbox.app/Contents/MacOS/
@@ -107,6 +107,7 @@ rm -rf Pvtbox.app/Contents/uninstall.app
 rm -rf PvtBox.app/Contents/Resources/*.workflow
 cp main.scpt Pvtbox.app/Contents/Resources/Scripts/main.scpt
 patch --forward Pvtbox.app/Contents/Info.plist < portable.patch
+rm Pvtbox.app/Contents/Info.plist.*
         
 ditto -c -k --sequesterRsrc --keepParent Pvtbox.app Pvtbox-portable.app.zip
 

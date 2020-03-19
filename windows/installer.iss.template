@@ -193,6 +193,12 @@ Root: HKCU; Subkey: "Software\Classes\CLSID\{#NAV_PANE_CLSID}\ShellFolder"; Valu
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\Desktop\NameSpace\{#NAV_PANE_CLSID}"; ValueType: "string"; ValueData: "Pvtbox"; Flags: uninsdeletekey; MinVersion: 10.0; Check: not IsPortable
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel"; ValueType: "dword"; ValueName: "{#NAV_PANE_CLSID}"; ValueData: "$1"; Flags: uninsdeletevalue; MinVersion: 10.0; Check: not IsPortable
 
+; Set registry entries to work with smart sync
+Root: HKCU; Subkey: "Software\Classes\.pvtbox"; ValueType: "string"; ValueData: "net.pvtbox.SMARTFILE"; Flags: uninsdeletekey; Check: not IsPortable;
+Root: HKCU; Subkey: "Software\Classes\net.pvtbox.SMARTFILE"; ValueType: "string"; ValueData: "Pvtbox SmartSync+ file"; Flags: uninsdeletekey; Check: not IsPortable;
+Root: HKCU; Subkey: "Software\Classes\net.pvtbox.SMARTFILE"; ValueType: "string"; ValueName: "NeverShowExt"; ValueData: ""; Check: not IsPortable;
+Root: HKCU; Subkey: "Software\Classes\net.pvtbox.SMARTFILE\DefaultIcon"; ValueType: "string"; ValueData: "{app}\icons\file_online.ico"; Check: not IsPortable
+Root: HKCU; Subkey: "Software\Classes\net.pvtbox.SMARTFILE\shell\open\command"; ValueType: "string"; ValueData: """{app}\{#PVTBOXEXE}"" ""--offline-on"" ""%1"""; Check: not IsPortable
 
 ;********************************************************************************
 ;** Code Section with Pascal helpers.
@@ -283,6 +289,11 @@ begin
 	
     //idpSetInternalOption('AllowContinue', '1'); uncomment to show custom error page
 	
+    //Set registry entries to enable protocols TLS 1.1 and TLS 1.2
+    RegWriteDWordValue(HKEY_CURRENT_USER,
+                       'Software\Microsoft\Windows\CurrentVersion\Internet Settings',
+                       'SecureProtocols', 2720);
+
     if Is64BitInstallMode then
     begin
         Log('Add file download {#SERVER_PATH}/x64.zip into ' + ExpandConstant('{tmp}\archive.zip'));
@@ -490,7 +501,7 @@ begin
                 ShellExec(RunMethod, ExpandConstant('{tmp}\PvtboxIntegration.exe'), ExpandConstant('{app}'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
             end else
             begin
-                if not overlaysExists then
+                if not overlaysExists or True then
                     begin
                         try
                             ShellExec(RunMethod, ExpandConstant('{tmp}\PvtboxIntegration.exe'), ExpandConstant('{app}'), ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode);
